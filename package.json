@@ -12,6 +12,16 @@
     "release": "pika publish --access public",
     "version": "yarn run build"
   },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write"
+    ]
+  },
   "@pika/pack": {
     "pipeline": [
       [
@@ -32,6 +42,9 @@
     "@pika/plugin-build-web": "~0.6.0",
     "@pika/plugin-ts-standard-pkg": "~0.6.0",
     "@types/react": "17.0.0",
+    "husky": "4.3.6",
+    "lint-staged": "10.5.3",
+    "prettier": "2.2.1",
     "react": "~17.0.1",
     "rimraf": "~3.0.0",
     "typescript": "~3.5.3"
