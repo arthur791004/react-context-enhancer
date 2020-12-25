@@ -3,66 +3,70 @@ import { ContextProviderProps, SelectorFn } from './types';
 import Subscription from './Subscription';
 import { refEqual } from './utils';
 
-const Context = React.createContext(undefined);
+export const createContext = (ctx) => {
+  const Context = React.createContext(ctx);
 
-export const ContextProvider = ({ value, children }: ContextProviderProps) => {
-  const subscription = React.useMemo(() => new Subscription(), []);
-  const valueRef = React.useRef(value);
-  const targetValue = React.useMemo(
-    () => ({
-      valueRef,
-      subscription,
-    }),
-    [valueRef, subscription]
-  );
+  const ContextProvider = ({ value, children }: ContextProviderProps) => {
+    const subscription = React.useMemo(() => new Subscription(), []);
+    const valueRef = React.useRef(value);
+    const targetValue = React.useMemo(
+      () => ({
+        valueRef,
+        subscription,
+      }),
+      [valueRef, subscription]
+    );
 
-  valueRef.current = value;
+    valueRef.current = value;
 
-  React.useLayoutEffect(() => {
-    subscription.notify();
-  }, [valueRef, subscription]);
+    React.useLayoutEffect(() => {
+      subscription.notify();
+    }, [valueRef, subscription]);
 
-  return <Context.Provider value={targetValue}>{children}</Context.Provider>;
-};
+    return <Context.Provider value={targetValue}>{children}</Context.Provider>;
+  };
 
-export const useContextSelector = (
-  selector: SelectorFn,
-  areEqual = refEqual
-) => {
-  const { valueRef, subscription } = React.useContext(Context);
-  const [, forceRender] = React.useReducer((s) => s + 1, 0);
-  const latestSelectorRef = React.useRef<SelectorFn>();
-  const latestSelectedValueRef = React.useRef();
-  const selectedValue =
-    selector !== latestSelectorRef.current
-      ? selector(valueRef.current)
-      : latestSelectedValueRef.current;
+  const useContextSelector = (selector: SelectorFn, areEqual = refEqual) => {
+    const { valueRef, subscription } = React.useContext(Context);
+    const [, forceRender] = React.useReducer((s) => s + 1, 0);
+    const latestSelectorRef = React.useRef<SelectorFn>();
+    const latestSelectedValueRef = React.useRef();
+    const selectedValue =
+      selector !== latestSelectorRef.current
+        ? selector(valueRef.current)
+        : latestSelectedValueRef.current;
 
-  latestSelectorRef.current = selector;
-  latestSelectedValueRef.current = selectedValue;
+    latestSelectorRef.current = selector;
+    latestSelectedValueRef.current = selectedValue;
 
-  React.useLayoutEffect(() => {
-    const checkForUpdates = () => {
-      try {
-        const nextSelectedValue = latestSelectorRef.current(valueRef.current);
-        if (areEqual(nextSelectedValue, latestSelectedValueRef.current)) {
-          return;
+    React.useLayoutEffect(() => {
+      const checkForUpdates = () => {
+        try {
+          const nextSelectedValue = latestSelectorRef.current(valueRef.current);
+          if (areEqual(nextSelectedValue, latestSelectedValueRef.current)) {
+            return;
+          }
+
+          latestSelectedValueRef.current = nextSelectedValue;
+        } catch (error) {
+          // ignore error
         }
 
-        latestSelectedValueRef.current = nextSelectedValue;
-      } catch (error) {
-        // ignore error
-      }
+        forceRender();
+      };
 
-      forceRender();
-    };
+      subscription.subscribe(checkForUpdates);
 
-    subscription.subscribe(checkForUpdates);
+      return () => {
+        subscription.unsubscribe(checkForUpdates);
+      };
+    }, [valueRef, subscription]);
 
-    return () => {
-      subscription.unsubscribe(checkForUpdates);
-    };
-  }, [valueRef, subscription]);
+    return selectedValue;
+  };
 
-  return selectedValue;
+  return {
+    ContextProvider,
+    useContextSelector,
+  };
 };

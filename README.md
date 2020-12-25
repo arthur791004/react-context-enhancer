@@ -17,7 +17,9 @@ TBD
 
 ```js
 import * as React from 'react';
-import { ContextProvider, useContextSelector } from '@arthur791004/react-context-enhancer';
+import { createContext } from '@arthur791004/react-context-enhancer';
+
+const { ContextProvider, useContextSelector } = createContext();
 
 const IncreaseButton = () => {
   const setCount = useContextSelector(contextValue => contextValue.setCount);
